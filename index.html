@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FilsBox — Mes fichiers</title>
+<style>
+:root{
+  --bg:#f5f7fb;--card:#fff;--text:#172033;--muted:#718096;
+  --primary:#5b5cf0;--primary2:#7c3aed;--border:#e7eaf2;
+  --danger:#ef4444;--shadow:0 12px 35px rgba(20,30,60,.08)
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--text)}
+button,input,textarea{font:inherit}
+button{cursor:pointer;border:0}
+.app{display:flex;min-height:100vh}
+.sidebar{width:250px;background:var(--card);border-right:1px solid var(--border);padding:22px 16px;position:fixed;inset:0 auto 0 0;z-index:5}
+.logo{font-size:23px;font-weight:800;padding:8px 12px 25px}.logo span{color:var(--primary)}
+.nav button{width:100%;text-align:left;background:transparent;padding:12px 14px;border-radius:12px;margin:3px 0;color:var(--text)}
+.nav button:hover,.nav button.active{background:#eef0ff;color:var(--primary);font-weight:700}
+.sidebar-bottom{position:absolute;bottom:18px;left:16px;right:16px}
+.main{margin-left:250px;width:calc(100% - 250px);padding:28px;max-width:1500px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:25px}
+h1{margin:0;font-size:30px}.sub{color:var(--muted);margin-top:5px}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.btn{padding:11px 16px;border-radius:12px;background:var(--card);border:1px solid var(--border);font-weight:650}
+.btn.primary{background:var(--primary);color:white;border-color:var(--primary)}
+.btn.danger{color:var(--danger)}
+.search{background:var(--card);border:1px solid var(--border);padding:13px 16px;border-radius:13px;width:100%;outline:none}
+.search:focus{border-color:var(--primary)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-top:18px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:20px;box-shadow:var(--shadow)}
+.folder{transition:.2s}.folder:hover{transform:translateY(-2px);border-color:#cfd2ff}
+.folder-icon{font-size:38px}.folder h3{margin:12px 0 5px}.muted{color:var(--muted);font-size:14px}
+.file{display:flex;align-items:center;gap:13px}.file-icon{width:48px;height:48px;border-radius:13px;background:#f0f2ff;display:grid;place-items:center;font-size:24px}
+.file-info{min-width:0;flex:1}.file-name{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file-actions{display:flex;gap:5px}.iconbtn{background:transparent;padding:7px;border-radius:8px}.iconbtn:hover{background:#f0f1f6}
+.empty{text-align:center;padding:55px 20px;color:var(--muted);grid-column:1/-1}
+.modal{position:fixed;inset:0;background:rgba(10,15,30,.48);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}
+.modal.show{display:flex}.modal-box{background:var(--card);border-radius:20px;padding:25px;width:min(500px,100%);box-shadow:0 30px 80px #0003}
+.modal h2{margin-top:0}.field{margin:13px 0}.field label{display:block;font-weight:650;margin-bottom:7px}
+.field input,.field textarea{width:100%;padding:12px;border:1px solid var(--border);border-radius:11px;outline:none;background:var(--card);color:var(--text)}
+.field textarea{min-height:130px;resize:vertical}.modal-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px}
+.auth{position:fixed;inset:0;background:var(--bg);display:grid;place-items:center;padding:20px;z-index:50}
+.auth-box{width:min(430px,100%);background:var(--card);border:1px solid var(--border);border-radius:24px;padding:30px;box-shadow:var(--shadow)}
+.auth h1{margin-bottom:5px}.tabs{display:flex;background:#f0f2f7;padding:4px;border-radius:12px;margin:20px 0}.tabs button{flex:1;padding:10px;border-radius:9px;background:transparent}.tabs button.active{background:white;box-shadow:0 2px 8px #0001;font-weight:700}
+.status{font-size:13px;color:var(--muted);margin-top:10px}
+.toast{position:fixed;right:20px;bottom:20px;background:#171b2b;color:white;padding:13px 17px;border-radius:12px;display:none;z-index:100}
+.mobile-menu{display:none}
+@media(max-width:800px){
+ .sidebar{transform:translateX(-100%);transition:.2s}.sidebar.open{transform:translateX(0)}
+ .main{margin-left:0;width:100%;padding:20px}.mobile-menu{display:block}
+ .top{align-items:flex-start}.top h1{font-size:25px}
+}
+
+.zoomable-image{
+  max-width:100%;
+  max-height:65vh;
+  display:block;
+  margin:auto;
+  border-radius:12px;
+  cursor:zoom-in;
+  transition:transform .15s ease;
+  user-select:none;
+}
+.zoomable-image.zoomed{
+  max-width:none;
+  max-height:none;
+  width:auto;
+  height:auto;
+  cursor:zoom-out;
+  transform-origin:center center;
+}
+</style>
+
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#5b5cf0">
+<link rel="apple-touch-icon" href="icon.svg">
+</head>
+<body>
+
+<div id="auth" class="auth">
+  <div class="auth-box">
+    <div class="logo">Fils<span>Box</span></div>
+    <h1 id="authTitle">Bienvenue 👋</h1>
+    <div class="sub">Tes fichiers, organisés partout.</div>
+    <div class="tabs">
+      <button id="loginTab" class="active" onclick="setAuthMode('login')">Connexion</button>
+      <button id="signupTab" onclick="setAuthMode('signup')">Créer un compte</button>
+    </div>
+    <div class="field"><label>Pseudo</label><input id="username" type="text" placeholder="Ton pseudo" autocomplete="username"></div>
+    <div class="field"><label>Mot de passe</label><input id="password" type="password" placeholder="••••••••" autocomplete="current-password"></div>
+    <button class="btn primary" style="width:100%" onclick="submitAuth()" id="authBtn">Se connecter</button>
+    <div class="status" id="authStatus">Crée un compte avec ton pseudo et ton mot de passe pour commencer.</div>
+  </div>
+</div>
+
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="logo">Fils<span>Box</span></div>
+    <div class="nav">
+      <button class="active" onclick="showSection('home',this)">🏠 Accueil</button>
+      <button onclick="showSection('files',this)">📁 Tous les fichiers</button>
+      <button onclick="showSection('favorites',this)">⭐ Favoris</button>
+      
+    </div>
+    <div class="sidebar-bottom">
+      <button class="btn" style="width:100%" onclick="toggleTheme()">🌙 Apparence</button>
+      <button class="btn danger" style="width:100%;margin-top:8px" onclick="logout()">↪ Déconnexion</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="top">
+      <div>
+        <button class="btn mobile-menu" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+        <h1 id="title">Mes fichiers</h1>
+        <div class="sub" id="userText">Synchronisation activée</div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="window.syncLink()">🔄 SYNCRO</button>
+        <button class="btn" onclick="openModal('categoryModal')">＋ Catégorie</button>
+        <button class="btn" onclick="openNoteModal()">📝 Note</button>
+        <button class="btn primary" onclick="document.getElementById('fileInput').click()">＋ Ajouter</button>
+        <input id="fileInput" type="file" multiple hidden onchange="addFiles(this.files)">
+      </div>
+    </div>
+
+    <input class="search" id="search" placeholder="🔎 Rechercher un fichier ou une catégorie..." oninput="render()">
+
+    <section>
+      <h2>Catégories</h2>
+      <div class="grid" id="categories"></div>
+    </section>
+
+    <section style="margin-top:30px">
+      <div class="grid" id="files"></div>
+    </section>
+  </main>
+</div>
+
+<div class="modal" id="categoryModal">
+  <div class="modal-box">
+    <h2>Nouvelle catégorie</h2>
+    <div class="field"><label>Nom</label><input id="categoryName" placeholder="Ex : Cours, Photos, Projets..."></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('categoryModal')">Annuler</button>
+      <button class="btn primary" onclick="createCategory()">Créer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="noteModal">
+  <div class="modal-box">
+    <h2>Nouvelle note</h2>
+    <div class="field"><label>Titre</label><input id="noteTitle" placeholder="Titre de la note"></div>
+    <div class="field"><label>Texte</label><textarea id="noteText" placeholder="Écris ton texte ici..."></textarea></div><div class="field"><label>Catégorie</label><select id="noteCategory" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:11px;background:var(--card);color:var(--text)"></select></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('noteModal')">Annuler</button>
+      <button class="btn primary" onclick="createNote()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="fileCategoryModal">
+  <div class="modal-box">
+    <h2>Ajouter le fichier</h2>
+    <div class="sub" id="selectedFileNames"></div>
+    <div class="field">
+      <label>Catégorie</label>
+      <select id="fileCategory" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:11px;background:var(--card);color:var(--text)"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="cancelFileAdd()">Annuler</button>
+      <button class="btn primary" onclick="confirmFileAdd()">Ajouter</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="viewerModal">
+  <div class="modal-box" style="width:min(900px,100%);max-height:90vh;overflow:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h2 id="viewerTitle">Aperçu</h2>
+      <button class="iconbtn" onclick="closeModal('viewerModal')">✕</button>
+    </div>
+    <div id="viewerContent" style="margin-top:15px"></div>
+  </div>
+</div>
+
+<div class="modal" id="folderModal">
+  <div class="modal-box" style="width:min(1000px,100%);max-height:90vh;overflow:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <h2 id="folderTitle">Dossier</h2>
+        <div class="sub" id="folderSubtitle"></div>
+      </div>
+      <button class="iconbtn" onclick="closeModal('folderModal')">✕</button>
+    </div>
+    <div class="grid" id="folderFiles" style="margin-top:18px"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- FilsBox : Firebase + hors connexion -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, updateProfile, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+const firebaseConfig={apiKey:"AIzaSyAuZNL5V_Txu_MzUGHWyMVljLmpfiFPlUo",authDomain:"fichier-ab107.firebaseapp.com",projectId:"fichier-ab107",storageBucket:"fichier-ab107.firebasestorage.app",messagingSenderId:"27085319272",appId:"1:27085319272:web:36a0daa6e42f842012dfdd",measurementId:"G-JNHJXR88LM"};
+const app=initializeApp(firebaseConfig),firebaseAuth=getAuth(app);
+let db; try{db=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})});}catch(e){db=getFirestore(app)}
+const usernameEl=document.getElementById('username'),passwordEl=document.getElementById('password'),authEl=document.getElementById('auth'),authBtn=document.getElementById('authBtn'),authTitle=document.getElementById('authTitle'),authStatus=document.getElementById('authStatus'),loginTab=document.getElementById('loginTab'),signupTab=document.getElementById('signupTab'),userText=document.getElementById('userText'),title=document.getElementById('title'),search=document.getElementById('search'),sidebar=document.getElementById('sidebar'),categoryName=document.getElementById('categoryName'),fileCategory=document.getElementById('fileCategory'),noteCategory=document.getElementById('noteCategory'),noteTitle=document.getElementById('noteTitle'),noteText=document.getElementById('noteText'),selectedFileNames=document.getElementById('selectedFileNames'),fileInput=document.getElementById('fileInput'),folderTitle=document.getElementById('folderTitle'),folderSubtitle=document.getElementById('folderSubtitle'),folderFiles=document.getElementById('folderFiles'),viewerTitle=document.getElementById('viewerTitle'),viewerContent=document.getElementById('viewerContent'); const categoriesEl=document.getElementById('categories'),filesEl=document.getElementById('files'); let currentUser=null,authMode='login',categories=[],files=[],unsubC=null,unsubF=null,pendingFiles=[];
+setPersistence(firebaseAuth,browserLocalPersistence).catch(()=>{});
+const pseudoEmail=u=>u.trim().toLowerCase().replace(/[^a-z0-9._-]/g,'_')+'@filsbox.local';
+const C=()=>collection(db,'users',currentUser.uid,'categories'), F=()=>collection(db,'users',currentUser.uid,'files');
+const err=e=>({"auth/email-already-in-use":"Ce pseudo existe déjà.","auth/invalid-credential":"Pseudo ou mot de passe incorrect.","auth/invalid-email":"Pseudo invalide.","auth/weak-password":"Le mot de passe doit contenir au moins 6 caractères.","auth/network-request-failed":"Cette opération nécessite Internet."}[e.code]||'Erreur : '+(e.message||'inconnue'));
+window.setAuthMode=m=>{authMode=m;loginTab.classList.toggle('active',m==='login');signupTab.classList.toggle('active',m==='signup');document.getElementById('authBtn').textContent=m==='login'?'Se connecter':'Créer mon compte';authTitle.textContent=m==='login'?'Bienvenue 👋':'Créer ton compte';authStatus.textContent=m==='login'?'Entre ton pseudo et ton mot de passe pour continuer.':'Choisis un pseudo et un mot de passe d’au moins 6 caractères.'};
+window.submitAuth=async()=>{let u=usernameEl.value.trim(),p=passwordEl.value;if(u.length<3)return toast('Le pseudo doit contenir au moins 3 caractères.');if(p.length<6)return toast('Le mot de passe doit contenir au moins 6 caractères.');document.getElementById('authBtn').disabled=true;try{let email=pseudoEmail(u);if(authMode==='signup'){let cr=await createUserWithEmailAndPassword(firebaseAuth,email,p);await updateProfile(cr.user,{displayName:u});await setDoc(doc(db,'users',cr.user.uid),{username:u,createdAt:Date.now()},{merge:true});toast('Compte créé avec succès 🎉')}else{await signInWithEmailAndPassword(firebaseAuth,email,p);toast('Connexion réussie 👋')}passwordEl.value=''}catch(e){toast(err(e))}finally{authBtn.disabled=false;authBtn.textContent=authMode==='login'?'Se connecter':'Créer mon compte'}};
+window.logout=()=>signOut(firebaseAuth);
+onAuthStateChanged(firebaseAuth,u=>{if(u){currentUser=u;authEl.style.display='none';userText.textContent='👤 Connecté en tant que '+(u.displayName||'Utilisateur');if(unsubC)unsubC();if(unsubF)unsubF();unsubC=onSnapshot(C(),q=>{categories=q.docs.map(d=>({id:d.id,...d.data()}));render();refreshSelects()},e=>toast('Firestore catégories : '+(e.code==='permission-denied'?'accès refusé — publie firestore.rules':(e.message||'erreur'))));unsubF=onSnapshot(F(),q=>{files=q.docs.map(d=>({id:d.id,...d.data()}));files.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));render()},e=>toast('Firestore fichiers : '+(e.code==='permission-denied'?'accès refusé — publie firestore.rules':(e.message||'erreur'))));render()}else{currentUser=null;categories=[];files=[];if(unsubC)unsubC();if(unsubF)unsubF();authEl.style.display='grid';render()}});
+window.openModal=id=>document.getElementById(id).classList.add('show');window.closeModal=id=>document.getElementById(id).classList.remove('show');
+window.createCategory=async()=>{if(!currentUser)return toast('Connecte-toi pour créer une catégorie.');let name=categoryName.value.trim();if(!name)return toast('Saisis un nom de catégorie.');try{await setDoc(doc(C()),{name,createdAt:Date.now()});categoryName.value='';closeModal('categoryModal');toast('Catégorie créée et synchronisée')}catch(e){toast('Création impossible : '+(e.code==='permission-denied'?'règles Firestore à vérifier':(e.message||'erreur réseau')))}};
+window.addFiles=list=>{let a=[...list];if(!a.length)return;pendingFiles=a;refreshSelects();selectedFileNames.textContent=a.length===1?a[0].name:`${a.length} fichiers sélectionnés`;openModal('fileCategoryModal');fileInput.value=''};
+window.cancelFileAdd=()=>{pendingFiles=[];closeModal('fileCategoryModal')};
+async function uploadOne(f,categoryId){
+  // Firestore only: files are stored as data URLs in the document. Keep them small.
+  if(f.size>650*1024) throw new Error('Fichier trop volumineux pour Firestore (limite FilsBox : 650 Ko).');
+  const dataUrl=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(new Error('Lecture du fichier impossible.'));r.readAsDataURL(f)});
+  const id=crypto.randomUUID();
+  await setDoc(doc(F(),id),{name:f.name,size:f.size,type:f.type||'application/octet-stream',createdAt:Date.now(),favorite:false,categoryId,dataUrl});
+}
+window.confirmFileAdd=async()=>{if(!currentUser)return;let a=pendingFiles||[],cat=fileCategory.value||null;if(!a.length)return;let btn=document.querySelector('#fileCategoryModal .btn.primary');btn.disabled=true;try{for(let f of a)await uploadOne(f,cat);closeModal('fileCategoryModal');pendingFiles=[];toast(a.length+' fichier(s) ajouté(s) et synchronisé(s)')}catch(e){toast('Ajout impossible : '+(e.message||'erreur'))}finally{btn.disabled=false}};
+window.openNoteModal=()=>{refreshSelects();openModal('noteModal')};
+window.createNote=async()=>{if(!currentUser)return toast('Connecte-toi pour enregistrer une note.');let noteName=noteTitle.value.trim(),text=noteText.value,cat=noteCategory.value||null;if(!noteName)return toast('Saisis un titre pour la note.');try{let id=crypto.randomUUID();await setDoc(doc(F(),id),{name:noteName+'.txt',type:'text/plain',text,size:new Blob([text]).size,createdAt:Date.now(),favorite:false,categoryId:cat,dataUrl:null});noteTitle.value='';noteText.value='';closeModal('noteModal');toast('Note enregistrée et synchronisée ☁️')}catch(e){toast('Enregistrement impossible : '+(e.code==='permission-denied'?'règles Firestore à vérifier':(e.message||'erreur réseau')))}};
+window.syncLink=async()=>{const url=location.href.split('#')[0];try{await navigator.clipboard.writeText(url);toast('Lien du site copié ! Ouvre-le sur l’autre appareil puis connecte-toi avec le même pseudo et mot de passe.')}catch(e){prompt('Copie ce lien puis ouvre-le sur l’autre appareil :',url)}};
+window.openFolder=id=>{let c=categories.find(x=>x.id===id);if(!c)return;let ff=files.filter(f=>f.categoryId===id);folderTitle.textContent='📁 '+c.name;folderSubtitle.textContent=ff.length+(ff.length>1?' fichiers':' fichier');folderFiles.innerHTML=ff.map(f=>fileCard(f)).join('')||'<div class="empty">Ce dossier est vide.</div>';openModal('folderModal')};
+window.openFile=async id=>{let f=files.find(x=>x.id===id);if(!f)return;viewerTitle.textContent=f.name;let v=viewerContent;if(f.type?.includes('image')&&f.dataUrl)v.innerHTML=`<div style="overflow:auto;max-height:70vh;text-align:center"><img src="${escAttr(f.dataUrl)}" class="zoomable-image" onclick="this.classList.toggle('zoomed')"></div>`;else if((f.type?.includes('pdf')||f.name.toLowerCase().endsWith('.pdf'))&&f.dataUrl)v.innerHTML=`<iframe src="${escAttr(f.dataUrl)}" style="width:100%;height:65vh;border:0;border-radius:12px"></iframe>`;else if(f.type?.includes('text'))v.innerHTML=`<pre style="white-space:pre-wrap;line-height:1.6;background:var(--bg);padding:18px;border-radius:12px">${esc(f.text||'')}</pre>`;else if(f.dataUrl)v.innerHTML=`<div class="empty"><a class="btn primary" href="${escAttr(f.dataUrl)}" download="${escAttr(f.name)}">Télécharger le fichier</a></div>`;else v.innerHTML='<div class="empty">Aperçu indisponible.</div>';openModal('viewerModal')};
+window.deleteFile=async id=>{let f=files.find(x=>x.id===id);if(!f)return;try{await deleteDoc(doc(F(),id));toast('Fichier supprimé')}catch(e){toast('Impossible de supprimer le fichier.')}};
+window.deleteCategory=async id=>{if(files.some(f=>f.categoryId===id))return toast('Déplace ou supprime d’abord les fichiers de cette catégorie.');await deleteDoc(doc(C(),id));toast('Catégorie supprimée')};
+window.toggleFavorite=async id=>{let f=files.find(x=>x.id===id);if(f)await setDoc(doc(F(),id),{favorite:!f.favorite},{merge:true})};
+window.showSection=(s,b)=>{document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');title.textContent=s==='favorites'?'Mes favoris':s==='files'?'Tous mes fichiers':'Mes fichiers';render(s);sidebar.classList.remove('open')};let currentSection='home';
+function render(s=currentSection){currentSection=s;let q=search.value.toLowerCase(),cats=categories.filter(c=>c.name.toLowerCase().includes(q)),fs=files.filter(f=>(f.name||'').toLowerCase().includes(q));if(s==='favorites')fs=fs.filter(f=>f.favorite);categoriesEl.innerHTML=cats.map(c=>`<div class="card folder" ondblclick="openFolder('${escAttr(c.id)}')"><div class="folder-icon">📁</div><h3>${esc(c.name)}</h3><div class="muted">${files.filter(f=>f.categoryId===c.id).length} fichier(s)</div><button class="iconbtn" onclick="event.stopPropagation();deleteCategory('${escAttr(c.id)}')">🗑️ Supprimer</button></div>`).join('')||'<div class="empty">Aucune catégorie.</div>';filesEl.innerHTML=fs.map(fileCard).join('')||'<div class="empty">Aucun fichier ici.</div>'}
+function fileCard(f){return `<div class="card file" ondblclick="openFile('${escAttr(f.id)}')"><div class="file-icon">${fileIcon(f.type,f.name)}</div><div class="file-info"><div class="file-name">${esc(f.name)}</div><div class="muted">${formatSize(f.size||0)}${f.categoryId?' · 📁 '+esc((categories.find(c=>c.id===f.categoryId)||{}).name||'Catégorie'):''}</div></div><div class="file-actions"><button class="iconbtn" onclick="event.stopPropagation();toggleFavorite('${escAttr(f.id)}')">${f.favorite?'⭐':'☆'}</button><button class="iconbtn" onclick="event.stopPropagation();deleteFile('${escAttr(f.id)}')">🗑️</button></div></div>`}
+function refreshSelects(){let opts='<option value="">📂 Sans catégorie</option>'+categories.map(c=>`<option value="${escAttr(c.id)}">📁 ${esc(c.name)}</option>`).join('');if(fileCategory)fileCategory.innerHTML=opts;if(noteCategory)noteCategory.innerHTML=opts}
+function safeName(n){return String(n).replace(/[^\w.\- ()]/g,'_').slice(0,120)}function escAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#039;')}function fileIcon(t,n){if(t?.includes('image'))return'🖼️';if(t?.includes('pdf')||n?.toLowerCase().endsWith('.pdf'))return'📕';if(t?.includes('text'))return'📝';return'📄'}function formatSize(n){if(!n)return'Fichier';let u=['o','Ko','Mo','Go'],i=0;while(n>=1024&&i<3){n/=1024;i++}return n.toFixed(i?1:0)+' '+u[i]}function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}window.toggleTheme=()=>{document.body.classList.toggle('dark');document.body.style.setProperty('--bg',document.body.classList.contains('dark')?'#0d111c':'#f5f7fb');document.body.style.setProperty('--card',document.body.classList.contains('dark')?'#151b29':'#fff');document.body.style.setProperty('--text',document.body.classList.contains('dark')?'#f4f6fb':'#172033');document.body.style.setProperty('--border',document.body.classList.contains('dark')?'#273047':'#e7eaf2')};function toast(t){let x=document.getElementById('toast');x.textContent=t;x.style.display='block';setTimeout(()=>x.style.display='none',2500)}
+usernameEl.addEventListener('keydown',e=>{if(e.key==='Enter')submitAuth()});passwordEl.addEventListener('keydown',e=>{if(e.key==='Enter')submitAuth()});
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+render();
+</script>
+</body>
+</html>
